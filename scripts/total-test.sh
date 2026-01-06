@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -x -e
+
 file_name=test.output
 score=0
 

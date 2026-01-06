@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# set -x -e
+
 cd arceos/ || exit
 
 rm pflash.img -f 
