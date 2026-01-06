@@ -32,6 +32,7 @@ impl GlobalAllocator {
 
     /// Initializes the allocator with the given region.
     pub fn init(&self, start_vaddr: usize, size: usize) {
+        warn!("Global allocator init start address = {}, size = {}\n", start_vaddr, size);
         self.inner.lock().init(start_vaddr, size);
     }
 
