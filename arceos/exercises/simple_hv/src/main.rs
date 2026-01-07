@@ -137,6 +137,9 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
         },
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
             warn!("Supervisor timer invoked ... ");
+            // TODO: Reset timer instead of disabling it.
+            // ctx.guest_regs.hstatus
+            unsafe{sstatus::clear_sie()};
             return true;
         }
         _ => {
