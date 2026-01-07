@@ -59,6 +59,7 @@ impl RootDirectory {
         self.main_fs.root_dir().create(path, FileType::Dir)?;
         fs.mount(path, self.main_fs.root_dir().lookup(path)?)?;
         self.mounts.push(MountPoint::new(path, fs));
+        warn!("Mounted {}, now mounts has {} elements", path, self.mounts.len());
         Ok(())
     }
 
@@ -109,15 +110,43 @@ impl VfsNodeOps for RootDirectory {
     }
 
     fn lookup(self: Arc<Self>, path: &str) -> VfsResult<VfsNodeRef> {
-        self.lookup_mounted_fs(path, |fs, rest_path| fs.root_dir().lookup(rest_path))
+        warn!("[Root FS VFS Node Ops] Lookup for {}", path);
+        self.lookup_mounted_fs(path, |fs, rest_path| {
+            // log::warn!("FS RootDir = {:?}", fs.root_dir());
+            // fs.root_dir().fmt(f)
+            // fs.root_dir().downcast_ref::<RamFileSystem>();
+            // fs.downcast::<RamFileSystem>();
+            warn!("[Root FS VFS Node Ops] Lookup for (rest) {}", rest_path);
+            // let rf = fs.get_ref().downcast_ref::<RamFileSystem>().unwarp();
+            fs.root_dir().lookup(rest_path)
+        })
     }
 
     fn create(&self, path: &str, ty: VfsNodeType) -> VfsResult {
+        log::warn!("[MODIFIED VFS Node OP for RootDir] create {:?} at Root FS: {}", ty, path);
         self.lookup_mounted_fs(path, |fs, rest_path| {
             if rest_path.is_empty() {
                 Ok(()) // already exists
             } else {
-                fs.root_dir().create(rest_path, ty)
+                log::warn!("[MODIFIED VFS Node OP for RootDir] Rest path = {}", rest_path);
+                // fs.root_dir().
+                // let subfs_attr = fs.root_dir().get_attr().unwrap();
+                // subfs_attr.into()
+                // let mut dirents = vec![]; 
+                let ret = fs.root_dir().create(rest_path, ty);
+                let mut dirents = Vec::with_capacity(5); // Vec::new(5);
+                match fs.root_dir().read_dir(0, &mut dirents) {
+                    Ok(n) => {
+                        warn!("Read Dir read {} entries", n);
+                    }
+                    Err(e) => {
+                        warn!("Read Dir failed with {}", e);
+                    }
+                }
+                for ent in dirents {
+                    warn!("Entry: {:?}", ent.name_as_bytes().to_ascii_uppercase());
+                }
+                ret
             }
         })
     }
@@ -133,10 +162,13 @@ impl VfsNodeOps for RootDirectory {
     }
 
     fn rename(&self, src_path: &str, dst_path: &str) -> VfsResult {
+        warn!("[ROOT RENAME] SRC = {}, DST = {}", src_path, dst_path);
         self.lookup_mounted_fs(src_path, |fs, rest_path| {
             if rest_path.is_empty() {
                 ax_err!(PermissionDenied) // cannot rename mount points
             } else {
+                warn!("[ROOT RENAME] REST = {}, DST = {}", rest_path, dst_path);
+                
                 fs.root_dir().rename(rest_path, dst_path)
             }
         })
@@ -146,6 +178,7 @@ impl VfsNodeOps for RootDirectory {
 pub(crate) fn init_rootfs(disk: crate::dev::Disk) {
     cfg_if::cfg_if! {
         if #[cfg(feature = "myfs")] { // override the default filesystem
+            log::warn!("MyFS for Main FS enabled. Check yourself the FS overriden");
             let main_fs = fs::myfs::new_myfs(disk);
         } else if #[cfg(feature = "fatfs")] {
             static FAT_FS: LazyInit<Arc<fs::fatfs::FatFileSystem>> = LazyInit::new();
@@ -306,5 +339,62 @@ pub(crate) fn rename(old: &str, new: &str) -> AxResult {
         warn!("dst file already exist, now remove it");
         remove_file(None, new)?;
     }
-    parent_node_of(None, old).rename(old, new)
+    // let res = parent_node_of(None, old).rename(old, new);
+    let old_node_res = parent_node_of(None, old).lookup(old);
+    match old_node_res {
+        Err(e) => {
+            warn!("inode of src file is corrupted, or it does not even exist.");
+            Err(e)
+        }
+        Ok(old_inode) => {
+            let dst_dir_node = parent_node_of(None, new);
+            dst_dir_node.create(new, VfsNodeType::File).unwrap();
+            match dst_dir_node.lookup(new) {
+                Ok(new_file_node) => {
+                    // 1 get file size of old inode
+                    // 2 copy content from old inode to new inode
+                    // 3 (optional) delete old inode
+                    // let old_into = old_inode.into();
+
+                    // TODO: Make it more robust.
+                    let old_size = old_inode.get_attr().unwrap().size();
+                    let mut old_contents:Vec<u8> = Vec::with_capacity(old_size as usize);
+                    let _ = old_inode.read_at(0, &mut old_contents);
+                    // let old_node_dcast = old_inode.as_any().downcast_ref::<axfs_ramfs::FileNode>().unwrap();
+                    // let old_content = old_node_dcast.content.read();
+                    // old_inode.read_at(0, buf)
+                    let _ = new_file_node.write_at(0, &old_contents);
+                }
+                Err(_e) => {
+                    todo!();
+                }
+            }
+            // dst_dir_node.create(new, VfsNodeType::File);
+            // match old_inode.get_attr() {
+            //     Ok(attr) => {
+            //         // attr.
+            //     }
+            //     Err(_e)=> {
+
+            //     }
+            // }
+            // // dst_dir_node.into().
+            // parent_node_of(None, old).rename(old, new)
+            // old_inode.rename(old, new) //;
+            Ok(())
+        }
+    }
+    // if old_node_res.is_err() {
+    //     warn!("inode of src file is corrupted, or it does not even exist.");
+    //     return Err(old_node_res.err().unwrap());
+    // } 
+    // old_node_res.
+    // Ok(())
+    // match res {
+    //     Ok(()) => {res}
+    //     Err(e) => {
+    //         warn!("Error captured at modules/axfs/src/root.rs: {}", e);
+    //         panic!("Error captured mentioned above");
+    //     }
+    // }
 }
