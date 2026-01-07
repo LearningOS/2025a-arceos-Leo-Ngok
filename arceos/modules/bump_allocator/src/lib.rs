@@ -50,8 +50,8 @@ impl<const SIZE: usize> BaseAllocator for EarlyAllocator<SIZE> {
         // panic!("start = {}, size = {}", start, size);
         // debug_assert!()
         // log_syntax!()
-        warn!("(Base allocator init) start = {}, size = {}\n", start, size);
-        warn!("Base allocator: SIZE = {}\n", SIZE);
+        debug!("(Base allocator init) start = {}, size = {}\n", start, size);
+        debug!("Base allocator: SIZE = {}\n", SIZE);
         self.loc_start = start;
         self.loc_size = size;
         self.bytes_end = start;
@@ -73,7 +73,7 @@ impl<const SIZE: usize> ByteAllocator for EarlyAllocator<SIZE> {
         layout: core::alloc::Layout,
     ) -> allocator::AllocResult<core::ptr::NonNull<u8>> {
         
-        warn!("malloc: layout alignment {}, layout size {}\n", layout.align(), layout.size());
+        debug!("malloc: layout alignment {}, layout size {}\n", layout.align(), layout.size());
         let start = if self.bytes_end % layout.align() == 0 {
             self.bytes_end
         } else { self.bytes_end - (self.bytes_end % layout.align()) + layout.align()};
@@ -93,8 +93,8 @@ impl<const SIZE: usize> ByteAllocator for EarlyAllocator<SIZE> {
     }
 
     fn dealloc(&mut self, pos: core::ptr::NonNull<u8>, layout: core::alloc::Layout) {
-        warn!("free: This implementation does not consider returning mem to allocator, may result in memory leak !!");
-        warn!("free: layout alignment {}, layout size {}\n", layout.align(), layout.size());
+        debug!("free: This implementation does not consider returning mem to allocator, may result in memory leak !!");
+        debug!("free: layout alignment {}, layout size {}\n", layout.align(), layout.size());
         // todo!()
     }
 

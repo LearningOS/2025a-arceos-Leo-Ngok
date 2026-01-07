@@ -1,13 +1,16 @@
 #![allow(dead_code)]
 
 use core::ffi::{c_void, c_char, c_int};
+use core::str;
+// use std::println;
 use axhal::arch::TrapFrame;
 use axhal::trap::{register_trap_handler, SYSCALL};
 use axerrno::LinuxError;
-use axtask::current;
+use axtask::{current};
 use axtask::TaskExtRef;
 use axhal::paging::MappingFlags;
 use arceos_posix_api as api;
+use memory_addr::{VirtAddr, VirtAddrRange};
 
 const SYS_IOCTL: usize = 29;
 const SYS_OPENAT: usize = 56;
@@ -140,7 +143,56 @@ fn sys_mmap(
     fd: i32,
     _offset: isize,
 ) -> isize {
-    unimplemented!("no sys_mmap!");
+    // as impl never fails.
+    debug!("base: {}, size: {}, prot: {}, flags: {}, fd: {}, offset: {}\n", addr as u64, length, prot, flags, fd, _offset);
+    
+
+    let t = axtask::current();
+    let mut aspace = t.task_ext().aspace.lock();
+    let map_addr = aspace.find_free_area(VirtAddr::from_mut_ptr_of(addr), length, VirtAddrRange::new(aspace.base(), aspace.end())).unwrap();
+
+    // let task_ctx = (*t).ctx_mut();
+    warn!("Address found by aspace free area = {}\n", map_addr.as_usize());
+
+    let aligned_start = map_addr.as_usize();
+    let end = aligned_start as usize + length;
+    let mask = 0xfff;
+
+    let aligned_end = if (end & !mask) == end { end } else { (end & !mask) + 4096 };
+    let aligned_size = aligned_end - aligned_start;
+
+    let ret1 = match aspace.map_alloc(
+        map_addr, aligned_size, crate::MappingFlags::from_bits(prot as usize | 8).unwrap(), true)
+    {
+        Ok(_) => {
+            0
+        }
+        Err(e) => {
+            warn!("Error mmap: {:?}", e);
+            -1
+        }
+    };
+    if ret1 != 0 {
+        return ret1;
+    }
+    warn!("API Sys Read\n");
+    if (flags & 0x20) == 0 {
+        let _ = aspace.protect(map_addr, aligned_size, crate::MappingFlags::from_bits(prot as usize | 2).unwrap());
+        api::sys_lseek(fd, _offset as i64, 0);
+        let read_size = api::sys_read(fd, aligned_start as *mut c_void, length);
+        warn!("After sys read");
+        if read_size != length as isize {
+            warn!("Expected to read {} bytes, but read {} actual.\n", length, read_size);
+            // return -read_size;
+        }
+        let _ = aspace.protect(map_addr, aligned_size, crate::MappingFlags::from_bits(prot as usize | 8).unwrap());
+        // let rres = aligned_start as *const u8;
+        // let resstr = unsafe{str::from_raw_parts(rres, read_size as usize)};
+        // println!("Read result: {}", resstr);
+    } // otherwise, anonymous map
+    
+    aligned_start as isize
+    // unimplemented!("no sys_mmap!");
 }
 
 fn sys_openat(dfd: c_int, fname: *const c_char, flags: c_int, mode: api::ctypes::mode_t) -> isize {
