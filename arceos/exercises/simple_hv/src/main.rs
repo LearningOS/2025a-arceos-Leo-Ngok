@@ -1,6 +1,6 @@
 #![cfg_attr(feature = "axstd", no_std)]
 #![cfg_attr(feature = "axstd", no_main)]
-#![feature(asm_const)]
+// #![feature(asm_const)]
 #![feature(riscv_ext_intrinsics)]
 
 #[cfg(feature = "axstd")]
@@ -40,15 +40,18 @@ fn main() {
     if let Err(e) = load_vm_image("/sbin/skernel2", &mut uspace) {
         panic!("Cannot load app! {:?}", e);
     }
-
+    // ax_println!("Setting up Guest CPU Context ...");
     // Setup context to prepare to enter guest mode.
     let mut ctx = VmCpuRegisters::default();
     prepare_guest_context(&mut ctx);
-
+    warn!("Entry point (s-epc): {}", ctx.guest_regs.sepc);
+    // ax_println!("Page Table Root: {}", ctx.guest_regs.)
+    // ax_println!("Setting up Guest Page Table ...");
     // Setup pagetable for 2nd address mapping.
     let ept_root = uspace.page_table_root();
     prepare_vm_pgtable(ept_root);
-
+    ctx.virtual_hs_csrs.hgatp = 8usize << 60 | ept_root.as_usize() >> 12;
+    warn!("Run ! ...");
     // Kick off vm and wait for it to exit.
     while !run_guest(&mut ctx) {
     }
@@ -68,17 +71,18 @@ fn prepare_vm_pgtable(ept_root: PhysAddr) {
 }
 
 fn run_guest(ctx: &mut VmCpuRegisters) -> bool {
+    warn!("Entering guest with context {:?} ...", ctx);
     unsafe {
         _run_guest(ctx);
     }
-
+    warn!("Guest exits ...");
     vmexit_handler(ctx)
 }
 
 #[allow(unreachable_code)]
 fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
     use scause::{Exception, Trap};
-
+    warn!("Welcome to VM exit handler !");
     let scause = scause::read();
     match scause.cause() {
         Trap::Exception(Exception::VirtualSupervisorEnvCall) => {
@@ -102,16 +106,34 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             }
         },
         Trap::Exception(Exception::IllegalInstruction) => {
-            panic!("Bad instruction: {:#x} sepc: {:#x}",
+            warn!("Bad instruction: {:#x} sepc: {:#x}",
                 stval::read(),
                 ctx.guest_regs.sepc
             );
+            if stval::read() == 0xf14025f3 {
+                ctx.guest_regs.sepc += 4;
+                // ctx.guest_regs.gprs.a_regs()
+                let mut _args = ctx.guest_regs.gprs.a_regs_mut();
+                _args[1] = 0x1234;
+                return true;
+            } else {
+                panic!("Unhandled illegal inst !!");
+            }
         },
         Trap::Exception(Exception::LoadGuestPageFault) => {
-            panic!("LoadGuestPageFault: stval{:#x} sepc: {:#x}",
+            warn!("LoadGuestPageFault: stval{:#x} sepc: {:#x}",
                 stval::read(),
                 ctx.guest_regs.sepc
             );
+            if stval::read() == 64 {
+                ctx.guest_regs.sepc += 4;
+                // ctx.guest_regs.gprs.a_regs()
+                let mut _args = ctx.guest_regs.gprs.a_regs_mut();
+                _args[0] = 0x6688;
+                return true;
+            } else {
+                panic!("Unhandled page fault !!");
+            }
         },
         _ => {
             panic!(
@@ -143,4 +165,5 @@ fn prepare_guest_context(ctx: &mut VmCpuRegisters) {
     ctx.guest_regs.sstatus = sstatus.bits();
     // Return to entry to start vm.
     ctx.guest_regs.sepc = VM_ENTRY;
+    // ctx.guest_regs.
 }

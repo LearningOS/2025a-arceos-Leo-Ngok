@@ -7,7 +7,18 @@ use crate::VM_ENTRY;
 
 pub fn load_vm_image(fname: &str, uspace: &mut AddrSpace) -> io::Result<()> {
     let mut buf = [0u8; 64];
-    load_file(fname, &mut buf)?;
+    let n_bytes_read = load_file(fname, &mut buf)?;
+    warn!("Load file read {} bytes.", n_bytes_read);
+    warn!("File contents: {:?}", buf);
+    // let mut hex_string = std::string::String::new();
+
+    // for &b in &buf {
+    //     // The {:02x} format specifier formats 'b' as a two-digit,
+    //     // lowercase hexadecimal number, with leading zeros as needed.
+    //     write!(&mut hex_string, "{:02x} ", b).expect("Unable to write");
+    // }
+
+    // ax_println!("Hex representation: {}", hex_string);
 
     uspace.map_alloc(VM_ENTRY.into(), PAGE_SIZE_4K, MappingFlags::READ|MappingFlags::WRITE|MappingFlags::EXECUTE|MappingFlags::USER, true).unwrap();
 
@@ -25,7 +36,7 @@ pub fn load_vm_image(fname: &str, uspace: &mut AddrSpace) -> io::Result<()> {
             PAGE_SIZE_4K,
         );
     }
-
+    warn!("Copied file {} to paddr: {:#x}", fname, paddr);
     Ok(())
 }
 

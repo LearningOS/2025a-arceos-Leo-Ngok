@@ -6,6 +6,7 @@ use super::regs::{GeneralPurposeRegisters, GprIndex};
 
 /// Hypervisor GPR and CSR state which must be saved/restored when entering/exiting virtualization.
 #[derive(Default)]
+#[derive(Debug)]
 #[repr(C)]
 struct HypervisorCpuState {
     gprs: GeneralPurposeRegisters,
@@ -17,6 +18,7 @@ struct HypervisorCpuState {
 
 /// Guest GPR and CSR state which must be saved/restored when exiting/entering virtualization.
 #[derive(Default)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct GuestCpuState {
     pub gprs: GeneralPurposeRegisters,
@@ -29,6 +31,7 @@ pub struct GuestCpuState {
 /// The CSRs that are only in effect when virtualization is enabled (V=1) and must be saved and
 /// restored whenever we switch between VMs.
 #[derive(Default)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct GuestVsCsrs {
     htimedelta: usize,
@@ -46,16 +49,18 @@ pub struct GuestVsCsrs {
 /// Virtualized HS-level CSRs that are used to emulate (part of) the hypervisor extension for the
 /// guest.
 #[derive(Default)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct GuestVirtualHsCsrs {
     hie: usize,
     hgeie: usize,
-    hgatp: usize,
+    pub hgatp: usize,
 }
 
 /// CSRs written on an exit from virtualization that are used by the hypervisor to determine the cause
 /// of the trap.
 #[derive(Default, Clone)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct VmCpuTrapState {
     pub scause: usize,
@@ -67,6 +72,7 @@ pub struct VmCpuTrapState {
 /// (v)CPU register state that must be saved or restored when entering/exiting a VM or switching
 /// between VMs.
 #[derive(Default)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct VmCpuRegisters {
     // CPU state that's shared between our's and the guest's execution environment. Saved/restored
@@ -79,7 +85,7 @@ pub struct VmCpuRegisters {
     vs_csrs: GuestVsCsrs,
 
     // Virtualized HS-level CPU state.
-    virtual_hs_csrs: GuestVirtualHsCsrs,
+    pub virtual_hs_csrs: GuestVirtualHsCsrs,
 
     // Read on VM exit.
     pub trap_csrs: VmCpuTrapState,

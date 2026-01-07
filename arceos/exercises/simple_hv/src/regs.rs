@@ -1,4 +1,5 @@
 #[derive(Default)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct GeneralPurposeRegisters([usize; 32]);
 
