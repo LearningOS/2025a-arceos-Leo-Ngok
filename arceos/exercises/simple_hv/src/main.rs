@@ -81,7 +81,7 @@ fn run_guest(ctx: &mut VmCpuRegisters) -> bool {
 
 #[allow(unreachable_code)]
 fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
-    use scause::{Exception, Trap};
+    use scause::{Exception, Trap, Interrupt};
     warn!("Welcome to VM exit handler !");
     let scause = scause::read();
     match scause.cause() {
@@ -135,6 +135,10 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
                 panic!("Unhandled page fault !!");
             }
         },
+        Trap::Interrupt(Interrupt::SupervisorTimer) => {
+            warn!("Supervisor timer invoked ... ");
+            return true;
+        }
         _ => {
             panic!(
                 "Unhandled trap: {:?}, sepc: {:#x}, stval: {:#x}",
