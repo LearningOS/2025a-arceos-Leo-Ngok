@@ -27,7 +27,7 @@ pub fn load_vm_image(fname: &str, uspace: &mut AddrSpace) -> io::Result<()> {
         .query(VM_ENTRY.into())
         .unwrap_or_else(|_| panic!("Mapping failed for segment: {:#x}", VM_ENTRY));
 
-    ax_println!("paddr: {:#x}", paddr);
+    // ax_println!("paddr: {:#x}", paddr);
 
     unsafe {
         core::ptr::copy_nonoverlapping(

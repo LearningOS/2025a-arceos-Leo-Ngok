@@ -31,7 +31,7 @@ const VM_ENTRY: usize = 0x8020_0000;
 
 #[cfg_attr(feature = "axstd", no_mangle)]
 fn main() {
-    ax_println!("Hypervisor ...");
+    // ax_println!("Hypervisor ...");
 
     // A new address space for vm.
     let mut uspace = axmm::new_user_aspace().unwrap();
