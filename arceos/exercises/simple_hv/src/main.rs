@@ -106,16 +106,16 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             }
         },
         Trap::Exception(Exception::IllegalInstruction) => {
-            // warn!("Bad instruction: {:#x} sepc: {:#x}",
-            //     stval::read(),
-            //     ctx.guest_regs.sepc
-            // );
+            warn!("Bad instruction: {:#x} sepc: {:#x}",
+                stval::read(),
+                ctx.guest_regs.sepc
+            );
             if stval::read() == 0xf14025f3 {
                 ctx.guest_regs.sepc += 4;
                 // ctx.guest_regs.gprs.a_regs()
                 let mut _args = ctx.guest_regs.gprs.a_regs_mut();
                 _args[1] = 0x1234;
-                return true;
+                // return true;
             } else {
                 panic!("Unhandled illegal inst !!");
             }
@@ -130,7 +130,7 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
                 // ctx.guest_regs.gprs.a_regs()
                 let mut _args = ctx.guest_regs.gprs.a_regs_mut();
                 _args[0] = 0x6688;
-                return true;
+                // return true;
             } else {
                 panic!("Unhandled page fault !!");
             }
@@ -140,7 +140,7 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             // TODO: Reset timer instead of disabling it.
             // ctx.guest_regs.hstatus
             unsafe{sstatus::clear_sie()};
-            return true;
+            // return true;
         }
         _ => {
             panic!(
