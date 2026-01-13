@@ -7,9 +7,9 @@ use crate::VM_ENTRY;
 
 pub fn load_vm_image(fname: &str, uspace: &mut AddrSpace) -> io::Result<()> {
     let mut buf = [0u8; 64];
-    let n_bytes_read = load_file(fname, &mut buf)?;
-    warn!("Load file read {} bytes.", n_bytes_read);
-    warn!("File contents: {:?}", buf);
+    let _ = load_file(fname, &mut buf)?;
+    // warn!("Load file read {} bytes.", n_bytes_read);
+    // warn!("File contents: {:?}", buf);
     // let mut hex_string = std::string::String::new();
 
     // for &b in &buf {
@@ -36,7 +36,7 @@ pub fn load_vm_image(fname: &str, uspace: &mut AddrSpace) -> io::Result<()> {
             PAGE_SIZE_4K,
         );
     }
-    warn!("Copied file {} to paddr: {:#x}", fname, paddr);
+    // warn!("Copied file {} to paddr: {:#x}", fname, paddr);
     Ok(())
 }
 

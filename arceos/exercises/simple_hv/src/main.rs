@@ -44,14 +44,14 @@ fn main() {
     // Setup context to prepare to enter guest mode.
     let mut ctx = VmCpuRegisters::default();
     prepare_guest_context(&mut ctx);
-    warn!("Entry point (s-epc): {}", ctx.guest_regs.sepc);
+    // warn!("Entry point (s-epc): {}", ctx.guest_regs.sepc);
     // ax_println!("Page Table Root: {}", ctx.guest_regs.)
     // ax_println!("Setting up Guest Page Table ...");
     // Setup pagetable for 2nd address mapping.
     let ept_root = uspace.page_table_root();
     prepare_vm_pgtable(ept_root);
     ctx.virtual_hs_csrs.hgatp = 8usize << 60 | ept_root.as_usize() >> 12;
-    warn!("Run ! ...");
+    // warn!("Run ! ...");
     // Kick off vm and wait for it to exit.
     while !run_guest(&mut ctx) {
     }
@@ -71,18 +71,18 @@ fn prepare_vm_pgtable(ept_root: PhysAddr) {
 }
 
 fn run_guest(ctx: &mut VmCpuRegisters) -> bool {
-    warn!("Entering guest with context {:?} ...", ctx);
+    // warn!("Entering guest with context {:?} ...", ctx);
     unsafe {
         _run_guest(ctx);
     }
-    warn!("Guest exits ...");
+    // warn!("Guest exits ...");
     vmexit_handler(ctx)
 }
 
 #[allow(unreachable_code)]
 fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
     use scause::{Exception, Trap, Interrupt};
-    warn!("Welcome to VM exit handler !");
+    // warn!("Welcome to VM exit handler !");
     let scause = scause::read();
     match scause.cause() {
         Trap::Exception(Exception::VirtualSupervisorEnvCall) => {
@@ -106,10 +106,10 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             }
         },
         Trap::Exception(Exception::IllegalInstruction) => {
-            warn!("Bad instruction: {:#x} sepc: {:#x}",
-                stval::read(),
-                ctx.guest_regs.sepc
-            );
+            // warn!("Bad instruction: {:#x} sepc: {:#x}",
+            //     stval::read(),
+            //     ctx.guest_regs.sepc
+            // );
             if stval::read() == 0xf14025f3 {
                 ctx.guest_regs.sepc += 4;
                 // ctx.guest_regs.gprs.a_regs()
@@ -121,10 +121,10 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             }
         },
         Trap::Exception(Exception::LoadGuestPageFault) => {
-            warn!("LoadGuestPageFault: stval{:#x} sepc: {:#x}",
-                stval::read(),
-                ctx.guest_regs.sepc
-            );
+            // warn!("LoadGuestPageFault: stval{:#x} sepc: {:#x}",
+            //     stval::read(),
+            //     ctx.guest_regs.sepc
+            // );
             if stval::read() == 64 {
                 ctx.guest_regs.sepc += 4;
                 // ctx.guest_regs.gprs.a_regs()
@@ -136,7 +136,7 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             }
         },
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
-            warn!("Supervisor timer invoked ... ");
+            // warn!("Supervisor timer invoked ... ");
             // TODO: Reset timer instead of disabling it.
             // ctx.guest_regs.hstatus
             unsafe{sstatus::clear_sie()};
